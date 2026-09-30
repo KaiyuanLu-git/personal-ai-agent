@@ -46,7 +46,7 @@ def clean_content(text):
         cleaned_lines.append(line)
     return "\n".join(cleaned_lines)
 
-def one_shot(query):
+def one_shot(messages):
     load_dotenv()
     max_iter = 10
 
@@ -55,9 +55,7 @@ def one_shot(query):
         base_url="https://api.deepseek.com"
     )
 
-    messages = []
-    query_message = {"role": "user", "content": query}
-    messages.append(query_message)
+
     response = client.chat.completions.create(
         model="deepseek-chat",
         messages=messages,
@@ -118,7 +116,7 @@ def main():
         if user_input in ['quit', "exit", "退出"]:
             break
         messages.append({"role":"user", "content": user_input})
-        message = one_shot(user_input)
+        message = one_shot(messages)
         print(message)
         messages.append({"role":"assistant", "content": message})
 
