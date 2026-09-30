@@ -46,6 +46,83 @@ def clean_content(text):
         cleaned_lines.append(line)
     return "\n".join(cleaned_lines)
 
+def one_shot(query):
+    load_dotenv()
+    max_iter = 10
+
+    client = OpenAI(
+        api_key=os.getenv("DEEPSEEK_API_KEY"),
+        base_url="https://api.deepseek.com"
+    )
+
+    messages = []
+    query_message = {"role": "user", "content": query}
+    messages.append(query_message)
+    response = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=messages,
+        tools=tools,
+    )
+
+    i = 0
+    finish_flag = 0
+    while(i < max_iter):
+        message = response.choices[0].message
+        print(message)
+        if not message.tool_calls:
+            finish_flag = 1
+            break
+        messages.append(message)
+        for tool_call in message.tool_calls:
+
+            id = tool_call.id
+            func_name = tool_call.function.name
+            func_arg_json = tool_call.function.arguments
+            func_arg = json.loads(func_arg_json)
+
+            print(func_arg)
+
+
+
+            func_to_call = available_functions[func_name]
+            result = func_to_call(**func_arg)
+
+
+
+            tool_result = {
+                "role": "tool",
+                "tool_call_id": id,
+                "content": str(result)
+            }
+            messages.append(tool_result)
+
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=messages,
+            tools=tools,
+        )
+        i += 1
+
+    if finish_flag == 0:
+        print("查询超时")
+        print()
+    else:
+        print(response.choices[0].message.content)
+    res = response.choices[0].message.content
+    return res
+
+def main():
+    messages = []
+    while True:
+        user_input = input()
+        if user_input in ['quit', "exit", "退出"]:
+            break
+        messages.append({"role":"user", "content": user_input})
+        message = one_shot(user_input)
+        print(message)
+        messages.append({"role":"assistant", "content": message})
+
+
 tools = [
     {
         "type": "function",
@@ -102,66 +179,4 @@ available_functions = {
 }
 
 if __name__ == "__main__":
-    load_dotenv()
-    print(web_search("阿斯特赖雅"))
-    max_iter = 10
-
-    client = OpenAI(
-        api_key=os.getenv("DEEPSEEK_API_KEY"),
-        base_url="https://api.deepseek.com"
-    )
-
-    messages = []
-    query = "我想知道阿斯特赖雅是什么东西"
-    query_message = {"role": "user", "content": query}
-    messages.append(query_message)
-    response = client.chat.completions.create(
-        model="deepseek-chat",
-        messages=messages,
-        tools=tools,
-    )
-
-    i = 0
-    finish_flag = 0
-    while(i < max_iter):
-        message = response.choices[0].message
-        print(message)
-        if not message.tool_calls:
-            finish_flag = 1
-            break
-        messages.append(message)
-        for tool_call in message.tool_calls:
-
-            id = tool_call.id
-            func_name = tool_call.function.name
-            func_arg_json = tool_call.function.arguments
-            func_arg = json.loads(func_arg_json)
-
-            print(func_arg)
-
-
-
-            func_to_call = available_functions[func_name]
-            result = func_to_call(**func_arg)
-
-
-
-            tool_result = {
-                "role": "tool",
-                "tool_call_id": id,
-                "content": str(result)
-            }
-            messages.append(tool_result)
-
-        response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=messages,
-            tools=tools,
-        )
-        i += 1
-
-    if finish_flag == 0:
-        print("查询超时")
-        print()
-    else:
-        print(response.choices[0].message.content)
+    main()
