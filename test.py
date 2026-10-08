@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import datetime
 import json
 import requests
+from my_rag import knowledge_search
 
 
 def get_current_time():
@@ -117,7 +118,6 @@ def main():
             break
         messages.append({"role":"user", "content": user_input})
         message = one_shot(messages)
-        print(message)
         messages.append({"role":"assistant", "content": message})
 
 
@@ -168,12 +168,30 @@ tools = [
                         }
                     }
                 },
+                    {
+            "type": "function",
+            "function": {
+                "name": "knowledge_search",
+                "description": "在本地知识库搜索结果，可查询kaiyuan的个人资料",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "expression": {
+                            "type": "string",
+                            "description": "所查询关键内容的string"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
 ]
 
 available_functions = {
     "get_current_time": get_current_time,
     "calculator": calculator,
     "web_search": web_search,
+    "knowledge_search": knowledge_search,
 }
 
 if __name__ == "__main__":
